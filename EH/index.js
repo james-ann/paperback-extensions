@@ -445,15 +445,14 @@ exports.searchRequest = searchRequest;
 },{}],49:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EHentai = exports.capitalize = exports.parseMangaStatus = exports.EHentaiInfo = void 0;
+exports.EHentai = exports.capitalize = exports.parseMangaStatus = exports.EHInfo = void 0;
 const paperback_extensions_common_1 = require("paperback-extensions-common");
 const Common_1 = require("./Common");
-exports.EHentaiInfo = {
-    version: "1.0.0",
+exports.EHInfo = {
+    version: "0.0.1",
     name: "E-Hentai",
     icon: "icon.png",
     author: "Anon",
-    authorWebsite: "https://github.com/",
     description: "E-Hentai extension for Paperback",
     contentRating: paperback_extensions_common_1.ContentRating.ADULT,
     websiteBaseURL: "https://e-hentai.org/",
