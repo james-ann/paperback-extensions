@@ -586,8 +586,8 @@ class EH extends paperback_extensions_common_1.Source {
         const page = metadata?.page ?? 0;
         let searchString = "";
         let paramsList = [];
-        if (metadata.page > 0) {
-            paramsList.push(metadata.page);
+        if (page > 0) {
+            paramsList.push(page.toString());
         }
         if (searchQuery.title !== undefined && searchQuery.title !== "") {
             searchString += "f_search=" + encodeURIComponent(searchQuery.title);
