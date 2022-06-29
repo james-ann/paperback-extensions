@@ -635,7 +635,7 @@ class EH extends paperback_extensions_common_1.Source {
                 typeof title !== "undefined" &&
                 typeof id !== "undefined") {
                 tiles.push(createMangaTile({
-                    id: id,
+                    id: (0, Common_1.extractID)(id),
                     title: createIconText({ text: title }),
                     image: image,
                 }));
