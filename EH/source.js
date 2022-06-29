@@ -759,7 +759,7 @@ class EHentai extends paperback_extensions_common_1.Source {
             pages: pages,
         });
     }
-    async searchRequest(searchQuery, metadata) {
+    async getSearchResults(searchQuery, metadata) {
         // This function is also called when the user search in an other source. It should not throw if the server is unavailable.
         const page = metadata?.page ?? 0;
         let paramsString = "";
