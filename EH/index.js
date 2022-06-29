@@ -761,7 +761,60 @@ class EHentai extends paperback_extensions_common_1.Source {
     }
     async getSearchResults(searchQuery, metadata) {
         // This function is also called when the user search in an other source. It should not throw if the server is unavailable.
-        return (0, Common_1.searchRequest)(searchQuery, metadata, this.requestManager, this.cheerio);
+        const page = metadata?.page ?? 0;
+        let paramsString = "";
+        if (searchQuery.title !== undefined && searchQuery.title !== "") {
+            paramsString += "f_search=" + encodeURIComponent(searchQuery.title);
+        }
+        if (searchQuery.includedTags !== undefined) {
+            searchQuery.includedTags.forEach((tag) => {
+                // you can apply tags to search for content
+                paramsString += encodeURIComponent(tag.id);
+            });
+        }
+        if (paramsString.length > 0) {
+            paramsString = "?" + paramsString;
+        }
+        const request = createRequestObject({
+            url: Common_1.DEFAULT_EHENTAI_PAGE,
+            method: "GET",
+            param: paramsString,
+        });
+        // We don't want to throw if the server is unavailable
+        let data;
+        try {
+            data = await this.requestManager.schedule(request, 1);
+        }
+        catch (error) {
+            console.log(`searchRequest failed with error: ${error}`);
+            return createPagedResults({
+                results: (0, Common_1.getServerUnavailableMangaTiles)(),
+            });
+        }
+        const $ = this.cheerio.load(data.data);
+        const tiles = [];
+        $("table.itg.gltc tr").each((i, elm) => {
+            if (i === 0)
+                return;
+            const data = $(elm).find("td.gl2c div.glthumb img").first();
+            let image = data.attr("data-src");
+            if (typeof image === "undefined") {
+                image = data.attr("src");
+            }
+            const title = data.attr("title");
+            const id = $(elm).find("td.gl3c.glname a").attr("href");
+            tiles.push(createMangaTile({
+                id: id,
+                title: createIconText({ text: title }),
+                image: image,
+            }));
+        });
+        // If no series were returned we are on the last page
+        metadata = tiles.length === 0 ? undefined : { page: page + 1 };
+        return createPagedResults({
+            results: tiles,
+            metadata,
+        });
     }
 }
 exports.EHentai = EHentai;
