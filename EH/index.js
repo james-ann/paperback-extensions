@@ -366,7 +366,7 @@ __exportStar(require("./SearchFilter"), exports);
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.searchRequest = exports.getServerUnavailableMangaTiles = exports.extractID = exports.DEFAULT_EHENTAI_PAGE = void 0;
-exports.DEFAULT_EHENTAI_PAGE = "https://e-hentai.org/";
+exports.DEFAULT_EHENTAI_PAGE = "https://e-hentai.org";
 const extractID = (url) => {
     return url.replace("https://e-hentai.org/g/", "").slice(0, -1);
 };
@@ -587,7 +587,7 @@ class EH extends paperback_extensions_common_1.Source {
         let searchString = "";
         let paramsList = [];
         if (page > 0) {
-            paramsList.push(page.toString());
+            paramsList.push("page=" + page.toString());
         }
         if (searchQuery.title !== undefined && searchQuery.title !== "") {
             searchString += "f_search=" + encodeURIComponent(searchQuery.title);
@@ -605,7 +605,7 @@ class EH extends paperback_extensions_common_1.Source {
         }
         console.log("THE URL IS " + Common_1.DEFAULT_EHENTAI_PAGE + paramsString);
         const request = createRequestObject({
-            url: Common_1.DEFAULT_EHENTAI_PAGE + paramsString,
+            url: Common_1.DEFAULT_EHENTAI_PAGE + "/" + paramsString,
             method: "GET",
         });
         // We don't want to throw if the server is unavailable
@@ -640,9 +640,7 @@ class EH extends paperback_extensions_common_1.Source {
                     image: image,
                 }));
             }
-            console.log(title);
         });
-        console.log(tiles.length);
         // If no series were returned we are on the last page
         metadata = tiles.length === 0 ? undefined : { page: page + 1 };
         return createPagedResults({
