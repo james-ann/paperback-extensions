@@ -631,11 +631,15 @@ class EH extends paperback_extensions_common_1.Source {
             }
             const title = data.attr("title");
             const id = $(elm).find("td.gl3c.glname a").attr("href");
-            tiles.push(createMangaTile({
-                id: id,
-                title: createIconText({ text: title }),
-                image: image,
-            }));
+            if (typeof image !== "undefined" &&
+                typeof title !== "undefined" &&
+                typeof id !== "undefined") {
+                tiles.push(createMangaTile({
+                    id: id,
+                    title: createIconText({ text: title }),
+                    image: image,
+                }));
+            }
             console.log(title);
         });
         console.log(tiles.length);
