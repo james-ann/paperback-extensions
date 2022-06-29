@@ -445,7 +445,7 @@ exports.searchRequest = searchRequest;
 },{}],49:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EHentai = exports.capitalize = exports.parseMangaStatus = exports.EHInfo = void 0;
+exports.EH = exports.capitalize = exports.parseMangaStatus = exports.EHInfo = void 0;
 const paperback_extensions_common_1 = require("paperback-extensions-common");
 const Common_1 = require("./Common");
 exports.EHInfo = {
@@ -483,7 +483,7 @@ const capitalize = (tag) => {
     return tag.replace(/^\w/, (c) => c.toUpperCase());
 };
 exports.capitalize = capitalize;
-class EHentai extends paperback_extensions_common_1.Source {
+class EH extends paperback_extensions_common_1.Source {
     constructor() {
         super(...arguments);
         this.stateManager = createSourceStateManager({});
@@ -491,184 +491,7 @@ class EHentai extends paperback_extensions_common_1.Source {
             requestsPerSecond: 4,
             requestTimeout: 20000,
         });
-        // override async getHomePageSections(
-        // 	sectionCallback: (section: HomeSection) => void
-        // ): Promise<void> {
-        // 	// This function is called on the homepage and should not throw if the server is unavailable
-        // 	// We won't use `await this.getKomgaAPI()` as we do not want to throw an error on
-        // 	// the homepage when server settings are not set
-        // 	const komgaAPI = await getKomgaAPI(this.stateManager);
-        // 	if (komgaAPI === null) {
-        // 		console.log("searchRequest failed because server settings are unset");
-        // 		const section = createHomeSection({
-        // 			id: "unset",
-        // 			title: "Go to source settings to set your Komga server credentials.",
-        // 			view_more: false,
-        // 			items: getServerUnavailableMangaTiles(),
-        // 		});
-        // 		sectionCallback(section);
-        // 		return;
-        // 	}
-        // 	// The source define two homepage sections: new and latest
-        // 	const sections = [
-        // 		createHomeSection({
-        // 			id: "new",
-        // 			title: "Recently added series",
-        // 			view_more: true,
-        // 		}),
-        // 		createHomeSection({
-        // 			id: "updated",
-        // 			title: "Recently updated series",
-        // 			view_more: true,
-        // 		}),
-        // 	];
-        // 	const promises: Promise<void>[] = [];
-        // 	for (const section of sections) {
-        // 		// Let the app load empty tagSections
-        // 		sectionCallback(section);
-        // 		const request = createRequestObject({
-        // 			url: `${komgaAPI}/series/${section.id}`,
-        // 			param: "?page=0&size=20&deleted=false",
-        // 			method: "GET",
-        // 		});
-        // 		// Get the section data
-        // 		promises.push(
-        // 			this.requestManager.schedule(request, 1).then((data) => {
-        // 				const result =
-        // 					typeof data.data === "string" ? JSON.parse(data.data) : data.data;
-        // 				const tiles = [];
-        // 				for (const serie of result.content) {
-        // 					tiles.push(
-        // 						createMangaTile({
-        // 							id: serie.id,
-        // 							title: createIconText({
-        // 								text: serie.metadata.title,
-        // 							}),
-        // 							image: `${komgaAPI}/series/${serie.id}/thumbnail`,
-        // 						})
-        // 					);
-        // 				}
-        // 				section.items = tiles;
-        // 				sectionCallback(section);
-        // 			})
-        // 		);
-        // 	}
-        // 	// Make sure the function completes
-        // 	await Promise.all(promises);
-        // }
-        // override async getViewMoreItems(
-        // 	homepageSectionId: string,
-        // 	metadata: any
-        // ): Promise<PagedResults> {
-        // 	const komgaAPI = await getKomgaAPI(this.stateManager);
-        // 	const page: number = metadata?.page ?? 0;
-        // 	const request = createRequestObject({
-        // 		url: `${komgaAPI}/series/${homepageSectionId}`,
-        // 		param: `?page=${page}&size=${PAGE_SIZE}&deleted=false`,
-        // 		method: "GET",
-        // 	});
-        // 	const data = await this.requestManager.schedule(request, 1);
-        // 	const result = typeof data.data === "string" ? JSON.parse(data.data) : data.data;
-        // 	const tiles: MangaTile[] = [];
-        // 	for (const serie of result.content) {
-        // 		tiles.push(
-        // 			createMangaTile({
-        // 				id: serie.id,
-        // 				title: createIconText({ text: serie.metadata.title }),
-        // 				image: `${komgaAPI}/series/${serie.id}/thumbnail`,
-        // 			})
-        // 		);
-        // 	}
-        // 	// If no series were returned we are on the last page
-        // 	metadata = tiles.length === 0 ? undefined : { page: page + 1 };
-        // 	return createPagedResults({
-        // 		results: tiles,
-        // 		metadata: metadata,
-        // 	});
-        // }
-        // override async filterUpdatedManga(
-        // 	mangaUpdatesFoundCallback: (updates: MangaUpdates) => void,
-        // 	time: Date,
-        // 	ids: string[]
-        // ): Promise<void> {
-        // 	const komgaAPI = await getKomgaAPI(this.stateManager);
-        // 	// We make requests of PAGE_SIZE titles to `series/updated/` until we got every titles
-        // 	// or we got a title which `lastModified` metadata is older than `time`
-        // 	let page = 0;
-        // 	const foundIds: string[] = [];
-        // 	let loadMore = true;
-        // 	while (loadMore) {
-        // 		const request = createRequestObject({
-        // 			url: `${komgaAPI}/series/updated/`,
-        // 			param: `?page=${page}&size=${PAGE_SIZE}&deleted=false`,
-        // 			method: "GET",
-        // 		});
-        // 		const data = await this.requestManager.schedule(request, 1);
-        // 		const result =
-        // 			typeof data.data === "string" ? JSON.parse(data.data) : data.data;
-        // 		for (const serie of result.content) {
-        // 			const serieUpdated = new Date(serie.metadata.lastModified);
-        // 			if (serieUpdated >= time) {
-        // 				if (ids.includes(serie)) {
-        // 					foundIds.push(serie);
-        // 				}
-        // 			} else {
-        // 				loadMore = false;
-        // 				break;
-        // 			}
-        // 		}
-        // 		// If no series were returned we are on the last page
-        // 		if (result.content.length === 0) {
-        // 			loadMore = false;
-        // 		}
-        // 		page = page + 1;
-        // 		if (foundIds.length > 0) {
-        // 			mangaUpdatesFoundCallback(
-        // 				createMangaUpdates({
-        // 					ids: foundIds,
-        // 				})
-        // 			);
-        // 		}
-        // 	}
-        // }
     }
-    // override async getTags(): Promise<TagSection[]> {
-    // 	// This function is called on the homepage and should not throw if the server is unavailable
-    // 	// We define tags as - `tag`
-    // 	let tagsResponse: Response;
-    // 	// We try to make the requests. If this fail, we return a placeholder tags list to inform the user and prevent the function from throwing an error
-    // 	try {
-    // 		const tagsRequest = createRequestObject({
-    // 			url: DEFAULT_EHENTAI_PAGE,
-    // 			method: "GET",
-    // 		});
-    // 		tagsResponse = await this.requestManager.schedule(tagsRequest, 1);
-    // 	} catch (error) {
-    // 		console.log(`getTags failed with error: ${error}`);
-    // 		return [
-    // 			createTagSection({
-    // 				id: "-1",
-    // 				label: "Server unavailable",
-    // 				tags: [],
-    // 			}),
-    // 		];
-    // 	}
-    // 	// The following part of the function should throw if there is an error and thus is not in the try/catch block
-    // 	const tagSections: [TagSection] = [
-    // 		createTagSection({ id: "0", label: "genres", tags: [] }),
-    // 	];
-    // 	const $ = this.cheerio.load(tagsResponse.data);
-    // 	// For each tag, we append a type identifier to its id and capitalize its label
-    // 	$(".itc td")
-    // 		.children()
-    // 		.each((index, tag) => {
-    // 			const bitmask = 1023 - parseInt($(tag).attr("id")!.replace("cat_", ""));
-    // 			tagSections[0].tags.push(
-    // 				createTag({ id: `genre-${bitmask.toString()}`, label: capitalize($(tag).text()) })
-    // 			);
-    // 		});
-    // 	return tagSections;
-    // }
     async getMangaDetails(mangaId) {
         const request = createRequestObject({
             url: `${Common_1.DEFAULT_EHENTAI_PAGE}/g/${mangaId}`,
@@ -764,7 +587,7 @@ class EHentai extends paperback_extensions_common_1.Source {
         return (0, Common_1.searchRequest)(searchQuery, metadata, this.requestManager, this.cheerio);
     }
 }
-exports.EHentai = EHentai;
+exports.EH = EH;
 
 },{"./Common":48,"paperback-extensions-common":4}]},{},[49])(49)
 });
