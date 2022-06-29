@@ -383,26 +383,32 @@ function getServerUnavailableMangaTiles() {
     ];
 }
 exports.getServerUnavailableMangaTiles = getServerUnavailableMangaTiles;
-async function searchRequest(searchQuery, metadata, requestManager, cheerio) {
+async function searchRequest(searchQuery, metadata, requestManager, cheerio, cookies) {
     // This function is also called when the user search in an other source. It should not throw if the server is unavailable.
     const page = metadata?.page ?? 0;
-    let paramsString = "";
+    let searchString = "";
+    let paramsList = [];
+    if (page > 0) {
+        paramsList.push("page=" + page.toString());
+    }
     if (searchQuery.title !== undefined && searchQuery.title !== "") {
-        paramsString += "f_search=" + encodeURIComponent(searchQuery.title);
+        searchString += "f_search=" + encodeURIComponent(searchQuery.title);
     }
     if (searchQuery.includedTags !== undefined) {
         searchQuery.includedTags.forEach((tag) => {
             // you can apply tags to search for content
-            paramsString += encodeURIComponent(tag.id);
+            searchString += encodeURIComponent(tag.id);
         });
     }
-    if (paramsString.length > 0) {
-        paramsString = "?" + paramsString;
+    paramsList.push(searchString);
+    let paramsString = "";
+    if (paramsList.length > 0) {
+        paramsString = "?" + paramsList.join("&");
     }
     const request = createRequestObject({
-        url: exports.DEFAULT_EHENTAI_PAGE,
+        url: exports.DEFAULT_EHENTAI_PAGE + "/" + paramsString,
         method: "GET",
-        param: paramsString,
+        cookies: cookies
     });
     // We don't want to throw if the server is unavailable
     let data;
@@ -427,11 +433,15 @@ async function searchRequest(searchQuery, metadata, requestManager, cheerio) {
         }
         const title = data.attr("title");
         const id = $(elm).find("td.gl3c.glname a").attr("href");
-        tiles.push(createMangaTile({
-            id: id,
-            title: createIconText({ text: title }),
-            image: image,
-        }));
+        if (typeof image !== "undefined" &&
+            typeof title !== "undefined" &&
+            typeof id !== "undefined") {
+            tiles.push(createMangaTile({
+                id: (0, exports.extractID)(id),
+                title: createIconText({ text: title }),
+                image: image,
+            }));
+        }
     });
     // If no series were returned we are on the last page
     metadata = tiles.length === 0 ? undefined : { page: page + 1 };
@@ -487,6 +497,13 @@ class EH extends paperback_extensions_common_1.Source {
     constructor() {
         super(...arguments);
         this.stateManager = createSourceStateManager({});
+        this.cookies = [
+            {
+                name: "nw",
+                value: "1",
+                domain: "https://e-hentai.org/",
+            },
+        ];
         this.requestManager = createRequestManager({
             requestsPerSecond: 4,
             requestTimeout: 20000,
@@ -496,6 +513,7 @@ class EH extends paperback_extensions_common_1.Source {
         const request = createRequestObject({
             url: `${Common_1.DEFAULT_EHENTAI_PAGE}/g/${mangaId}`,
             method: "GET",
+            cookies: this.cookies,
         });
         const response = await this.requestManager.schedule(request, 1);
         const $ = this.cheerio.load(response.data);
@@ -506,6 +524,7 @@ class EH extends paperback_extensions_common_1.Source {
         const imageRequest = createRequestObject({
             url: thumbnailUrl,
             method: "GET",
+            cookies: this.cookies,
         });
         const imageResponse = await this.requestManager.schedule(imageRequest, 1);
         const $1 = this.cheerio.load(imageResponse.data);
@@ -532,6 +551,7 @@ class EH extends paperback_extensions_common_1.Source {
         const request = createRequestObject({
             url: `${Common_1.DEFAULT_EHENTAI_PAGE}/g/${mangaId}`,
             method: "GET",
+            cookies: this.cookies,
         });
         const data = await this.requestManager.schedule(request, 1);
         const $ = this.cheerio.load(data.data);
@@ -553,6 +573,7 @@ class EH extends paperback_extensions_common_1.Source {
                 const request = createRequestObject({
                     url: `${Common_1.DEFAULT_EHENTAI_PAGE}/g/${mangaId}/?p=${i}`,
                     method: "GET",
+                    cookies: this.cookies,
                 });
                 const data = await this.requestManager.schedule(request, 1);
                 const $ = this.cheerio.load(data.data);
@@ -567,6 +588,7 @@ class EH extends paperback_extensions_common_1.Source {
             const request = createRequestObject({
                 url: page,
                 method: "GET",
+                cookies: this.cookies,
             });
             const data = await this.requestManager.schedule(request, 1);
             const $ = this.cheerio.load(data.data);
@@ -583,30 +605,100 @@ class EH extends paperback_extensions_common_1.Source {
         });
     }
     async getSearchResults(searchQuery, metadata) {
+        return await (0, Common_1.searchRequest)(searchQuery, metadata, this.requestManager, this.cheerio, this.cookies);
+    }
+    async getHomePageSections(sectionCallback) {
+        // This function is called on the homepage and should not throw if the server is unavailable
+        const request = createRequestObject({
+            url: Common_1.DEFAULT_EHENTAI_PAGE,
+            method: "GET",
+            cookies: this.cookies,
+        });
+        // We don't want to throw if the server is unavailable
+        let data;
+        try {
+            data = await this.requestManager.schedule(request, 1);
+        }
+        catch (error) {
+            console.log("homepage failed because website could not be reached");
+            const section = createHomeSection({
+                id: "error",
+                title: "Could not load E-Hentai",
+                view_more: false,
+                items: (0, Common_1.getServerUnavailableMangaTiles)(),
+            });
+            sectionCallback(section);
+            return;
+        }
+        // The source define two homepage sections: new and latest
+        const sections = [
+            createHomeSection({
+                id: "",
+                title: "Front Page",
+                view_more: true,
+            }),
+            createHomeSection({
+                id: "popular",
+                title: "Popular",
+                view_more: false,
+            }),
+        ];
+        const promises = [];
+        for (const section of sections) {
+            // Let the app load empty tagSections
+            sectionCallback(section);
+            const request = createRequestObject({
+                url: `${Common_1.DEFAULT_EHENTAI_PAGE}/${section.id}`,
+                method: "GET",
+                cookies: this.cookies,
+            });
+            // Get the section data
+            promises.push(this.requestManager.schedule(request, 1).then((data) => {
+                const $ = this.cheerio.load(data.data);
+                const tiles = [];
+                $("table.itg.gltc tr").each((i, elm) => {
+                    if (i === 0)
+                        return;
+                    const data = $(elm).find("td.gl2c div.glthumb img").first();
+                    let image = data.attr("data-src");
+                    if (typeof image === "undefined") {
+                        image = data.attr("src");
+                    }
+                    const title = data.attr("title");
+                    const id = $(elm).find("td.gl3c.glname a").attr("href");
+                    if (typeof image !== "undefined" &&
+                        typeof title !== "undefined" &&
+                        typeof id !== "undefined") {
+                        tiles.push(createMangaTile({
+                            id: (0, Common_1.extractID)(id),
+                            title: createIconText({ text: title }),
+                            image: image,
+                        }));
+                    }
+                });
+                section.items = tiles;
+                sectionCallback(section);
+            }));
+        }
+        // Make sure the function completes
+        await Promise.all(promises);
+    }
+    async getViewMoreItems(homepageSectionId, metadata) {
         const page = metadata?.page ?? 0;
         let searchString = "";
         let paramsList = [];
         if (page > 0) {
             paramsList.push("page=" + page.toString());
         }
-        if (searchQuery.title !== undefined && searchQuery.title !== "") {
-            searchString += "f_search=" + encodeURIComponent(searchQuery.title);
-        }
-        if (searchQuery.includedTags !== undefined) {
-            searchQuery.includedTags.forEach((tag) => {
-                // you can apply tags to search for content
-                searchString += encodeURIComponent(tag.id);
-            });
-        }
         paramsList.push(searchString);
         let paramsString = "";
         if (paramsList.length > 0) {
             paramsString = "?" + paramsList.join("&");
         }
-        console.log("THE URL IS " + Common_1.DEFAULT_EHENTAI_PAGE + paramsString);
         const request = createRequestObject({
             url: Common_1.DEFAULT_EHENTAI_PAGE + "/" + paramsString,
             method: "GET",
+            cookies: this.cookies,
         });
         // We don't want to throw if the server is unavailable
         let data;
